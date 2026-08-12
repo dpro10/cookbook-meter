@@ -52,7 +52,7 @@ With `--ledger`, each active day gets a `sessions-YYYY-MM-DD.json` file containi
 
 ## Acknowledgments
 
-[ccusage](https://github.com/ryoppippi/ccusage) is prior art for reading Claude Code's local logs and reporting cost, and it deserves the credit for proving people want this number. cookbook-meter differs in three ways: subagent transcripts fold into their parent sessions so a session's cost includes the agents it spawned, each day produces a ledger JSON file designed to be filed somewhere rather than only displayed, and the framing is the value of your subscription (what this month of work would have cost at API rates) rather than spend tracking.
+[ccusage](https://github.com/ryoppippi/ccusage) is prior art for reading coding-agent logs and reporting cost, and it deserves the credit for proving people want this number. It is also broader than this tool: it covers 16+ coding CLIs with weekly, monthly, and billing-block views, and if you want wide-angle usage reports you should use it. cookbook-meter is narrower on purpose: it is the intake end of a team ledger. The differences: subagent transcripts fold into their parent sessions so a session's cost includes the agents it spawned, each day produces a stable, idempotent ledger file designed to be kept and committed rather than exported on demand, and the framing is the value of your subscription (what this month of work would have cost at API rates) rather than spend tracking.
 
 ## Why we built this
 
