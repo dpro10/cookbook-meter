@@ -1,0 +1,34 @@
+{
+  "name": "cookbook-meter",
+  "version": "0.1.0",
+  "description": "Metadata-only usage meter for local Claude Code sessions: per-day and per-session token counts with API-equivalent dollars.",
+  "type": "module",
+  "bin": {
+    "cookbook-meter": "bin/cookbook-meter.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node bin/cookbook-meter.mjs",
+    "test": "tsx test/test-session-meter.ts"
+  },
+  "keywords": [
+    "claude-code",
+    "usage",
+    "tokens",
+    "ledger",
+    "cli"
+  ],
+  "author": "Diego Prozzi",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "tsx": "^4.19.0"
+  }
+}
