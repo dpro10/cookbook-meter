@@ -46,8 +46,8 @@ function check(name: string, fn: () => void): void {
 // ---- pricing ----
 check("cost math: fable-5 rates", () => {
   const u = { input: 100, output: 200, cacheCreation: 1000, cacheRead: 5000 };
-  // (100*10 + 200*50 + 1000*12.5 + 5000*1) / 1e6 = 0.0285
-  assert.ok(Math.abs(costUsd(u, DEFAULT_PRICING["claude-fable-5"]) - 0.0285) < 1e-9);
+  // (100*15 + 200*50 + 1000*18.75 + 5000*1.5) / 1e6 = 0.03775 (Fable rates calibrated 2026-08-29)
+  assert.ok(Math.abs(costUsd(u, DEFAULT_PRICING["claude-fable-5"]) - 0.03775) < 1e-9);
 });
 
 check("ratesFor: exact, family, fallback", () => {
@@ -129,8 +129,8 @@ check("day report D1: sessions active that day, totals, cost", () => {
   assert.equal(r1.totals.cacheRead, 7080);
   assert.equal(r1.totals.user_messages, 2);
   assert.equal(r1.totals.assistant_messages, 4);
-  // fable 0.0285 + sonnet (1050*3+560*15+70*3.75+2080*0.3)/1e6 = 0.0124365
-  assert.ok(Math.abs(r1.totals.cost_usd - 0.0409) < 5e-4, `got ${r1.totals.cost_usd}`);
+  // fable 0.03775 + sonnet (1050*3+560*15+70*3.75+2080*0.3)/1e6 = 0.0124365
+  assert.ok(Math.abs(r1.totals.cost_usd - 0.0502) < 5e-4, `got ${r1.totals.cost_usd}`);
 });
 
 check("day report D2: only session 1 active; unknown model flagged fallback", () => {
@@ -182,3 +182,17 @@ if (failures > 0) {
   process.exit(1);
 }
 console.log("\nall session-meter tests passed");
+
+// ── Streamed rows: one usage per message, last row wins ───────────────────────
+{
+  const FIX2 = path.resolve(path.dirname(new URL(import.meta.url).pathname), "fixtures", "session-meter-dedupe");
+  const ss = scanProjects(FIX2, 0);
+  check("dedupe: a reply streamed as 3 rows (same message id) counts once, with its final output", () => {
+    assert.equal(ss.length, 1);
+    const day = ss[0].days.get("2026-07-02")!;
+    assert.ok(day, "day bucket");
+    const u = day.models.get("claude-fable-5")!;
+    assert.deepEqual({ input: u.input, output: u.output, cacheCreation: u.cacheCreation, cacheRead: u.cacheRead }, { input: 15, output: 331, cacheCreation: 1000, cacheRead: 11000 });
+    assert.equal(day.assistantMessages, 2);
+  });
+}

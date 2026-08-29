@@ -1,6 +1,6 @@
 {
   "name": "cookbook-meter",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Metadata-only usage meter for local Claude Code sessions: per-day and per-session token counts with API-equivalent dollars.",
   "type": "module",
   "bin": {

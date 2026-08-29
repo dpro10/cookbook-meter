@@ -21,6 +21,11 @@ npx cookbook-meter --pricing my.json  # override the pricing table
 
 Requires Node 20 or newer.
 
+## Counting rules (v0.2.0)
+
+- **One usage per message.** Claude Code writes one transcript line per content block of a reply (text, tool call, …); every line repeats the same message id and usage, and the last line carries the final output count. v0.1.0 summed every line, which overcounted real transcripts by 60–70%. v0.2.0 keeps one usage per message (last row wins).
+- **Fable 5 rates calibrated.** Checked against 81 real Claude Code runs whose own cost report was known: the API-equivalent rate is about $15/M input and $50/M output (v0.1.0 assumed $10/$50). Sonnet 5 and Opus 5 rates are within ±20% of the same check; the table is still an estimate, not a bill.
+
 ## What it measures, and how
 
 - It scans `~/.claude/projects/**/*.jsonl`, the local transcripts Claude Code keeps for every session. Only metadata is read: timestamps, model ids, token counts, message counts, and the basename of the working directory.

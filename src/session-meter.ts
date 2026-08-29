@@ -31,7 +31,9 @@ export type Rates = { input: number; output: number; cacheWrite: number; cacheRe
 export const FALLBACK_RATES: Rates = { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 };
 
 export const DEFAULT_PRICING: Record<string, Rates> = {
-  "claude-fable-5": { input: 10, output: 50, cacheWrite: 12.5, cacheRead: 1 },
+  // Calibrated 2026-08-29 against 81 Claude Code runs whose own cost_usd was known
+  // (least squares, cache write 1.25× / read 0.1× of input): in ≈ $15.5, out ≈ $49.
+  "claude-fable-5": { input: 15, output: 50, cacheWrite: 18.75, cacheRead: 1.5 },
   "claude-opus-5": { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 },
   "claude-opus-4-8": { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 },
   "claude-opus-4-7": { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 },
@@ -149,6 +151,7 @@ export function parseTranscriptFile(file: string, session: SessionMeta): void {
   } catch {
     return; // unreadable file: skip, never fail the whole run
   }
+  const seenMessages = new Map<string, { day: DayUsage; model: string; usage: Usage }>();
   for (const line of raw.split("\n")) {
     if (!line.trim()) continue;
     let o: Record<string, unknown>;
@@ -169,23 +172,36 @@ export function parseTranscriptFile(file: string, session: SessionMeta): void {
       if (!o.isMeta) day.userMessages += 1;
       continue;
     }
-    // assistant
-    const message = o.message as { model?: string; usage?: Record<string, number> } | undefined;
+    // assistant. Claude Code writes ONE LINE PER CONTENT BLOCK of a reply (text,
+    // tool_use, …) and every line carries the same message id and the same usage —
+    // the last line has the final output count. Summing every line overcounted by
+    // 60–70% on real transcripts (measured 2026-08-29). Keep one usage per message
+    // (id + requestId), last row wins; rows without an id count as their own message.
+    const message = o.message as { id?: string; model?: string; usage?: Record<string, number> } | undefined;
     const model = message?.model;
     const usage = message?.usage;
-    day.assistantMessages += 1;
+    const key = message?.id ? `${message.id}|${typeof o.requestId === "string" ? o.requestId : ""}` : `row:${o.uuid ?? Math.random()}`;
+    if (!seenMessages.has(key)) { day.assistantMessages += 1; }
     if (!model || model === "<synthetic>" || !usage) continue;
-    let u = day.models.get(model);
-    if (!u) {
-      u = zeroUsage();
-      day.models.set(model, u);
-    }
-    addUsage(u, {
+    const u: Usage = {
       input: usage.input_tokens ?? 0,
       output: usage.output_tokens ?? 0,
       cacheCreation: usage.cache_creation_input_tokens ?? 0,
       cacheRead: usage.cache_read_input_tokens ?? 0,
-    });
+    };
+    const prev = seenMessages.get(key);
+    if (prev) {
+      // Replace: subtract what an earlier row of this message contributed.
+      const bucket = prev.day.models.get(prev.model);
+      if (bucket) { bucket.input -= prev.usage.input; bucket.output -= prev.usage.output; bucket.cacheCreation -= prev.usage.cacheCreation; bucket.cacheRead -= prev.usage.cacheRead; }
+    }
+    seenMessages.set(key, { day, model, usage: u });
+    let bucket = day.models.get(model);
+    if (!bucket) {
+      bucket = zeroUsage();
+      day.models.set(model, bucket);
+    }
+    addUsage(bucket, u);
   }
 }
 
